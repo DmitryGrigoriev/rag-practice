@@ -61,3 +61,31 @@ def retrieve_documents(
         }
         for idx in top_indices
     ]
+
+
+def build_context(retrieved_documents: list[dict]) -> str:
+    """
+    Формирует текстовый контекст из документов, найденных ретривером.
+
+    Args:
+        retrieved_documents: Список словарей с документами и их оценками релевантности.
+
+    Returns:
+        Строка с заголовками и содержимым найденных документов.
+    """
+    
+    context = "\n\n===\n\n".join(
+        [
+            f"""Документ {rank}
+
+    Заголовок:
+    {item["document"].metadata["title"]}
+
+    Содержимое:
+    {item["document"].page_content}
+    """
+            for rank, item in enumerate(retrieved_documents, start=1)
+        ]
+    )
+    
+    return context
