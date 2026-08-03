@@ -5,6 +5,9 @@ from pydantic import BaseModel
 
 class JudgeLabel(BaseModel):
     label: Literal["correct", "partial", "incorrect"]
+    
+class JudgeExplanation(BaseModel):
+    reason: str
 
 
 def judge_answer(
@@ -74,5 +77,70 @@ def judge_answer(
     )
     
     return JudgeLabel.model_validate_json(
+        response["message"]["content"]
+    )
+    
+
+def explain_judgement(
+    question: str,
+    context: str,
+    reference_answer: str,
+    candidate_answer: str,
+    label: str,
+) -> JudgeExplanation:
+    """
+    Объясняет причину ранее присвоенной метки соответствия ответа кандидата эталону.
+    Args:
+        question: текст вопроса пользователя
+        context: текстовый контекст, сформированный на основе документов, найденных ретривером.
+        reference_answer: эталонный ответ
+        candidate_answer: ответ модели кандидата
+        label: Ранее присвоенная метка: correct, partial или incorrect.
+    Returns:
+        Краткое объяснение причины присвоенной метки.
+    """
+    
+    prompt = """
+    Объясни уже поставленную оценку ответа.
+
+    Не меняй метку.
+    Укажи только конкретную причину оценки.
+    Ответь одним коротким предложением, не более 15 слов.
+    Верни только JSON с полем reason.
+    """
+
+    response = chat(
+        model="qwen3:4b-instruct",
+        messages=[
+            {"role": "system", "content": prompt},
+            {
+                "role": "user",
+                "content": f"""
+Контекст:
+{context}
+
+Вопрос:
+{question}
+
+Эталонный ответ:
+{reference_answer}
+
+Ответ кандидата:
+{candidate_answer}
+
+Поставленная метка:
+{label}
+""",
+            },
+        ],
+        format=JudgeExplanation.model_json_schema(),
+        options={
+            "temperature": 0,
+            "num_predict": 60,
+        },
+        think=False,
+    )
+
+    return JudgeExplanation.model_validate_json(
         response["message"]["content"]
     )
