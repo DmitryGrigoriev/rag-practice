@@ -1,5 +1,11 @@
+from src.data_loader import load_json
+
 def main():
     # 1. Загрузка данных
+    
+    articles = load_json("data/articles.json")
+    questions = load_json("data/questions.json")
+    answers = load_json("data/ground_truth.json")
     
     # 2. Подготовка документов и эмбеддингов
     
@@ -8,8 +14,6 @@ def main():
     # 4. Оценка результатов
     
     # 5. Сохранение результатов
-    pass
-
 
 if __name__ == "__main__":
     main()
