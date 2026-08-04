@@ -1,4 +1,5 @@
 from src.data_loader import load_json
+from src.indexing import create_documents, build_embeddings
 
 def main():
     # 1. Загрузка данных
@@ -8,6 +9,8 @@ def main():
     answers = load_json("data/ground_truth.json")
     
     # 2. Подготовка документов и эмбеддингов
+    documents = create_documents(articles)
+    embeddings = build_embeddings(documents)
     
     # 3. Генерация plain и RAG-ответов
     
