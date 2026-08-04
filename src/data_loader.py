@@ -11,4 +11,3 @@ def load_json(path: str | Path) -> list[dict]:
     """
     result = Path(path).read_text(encoding='utf-8')
     return json.loads(result)
-    

@@ -25,4 +25,4 @@ venv/
 Thumbs.db
 
 # Data
-data/*.jsong
+data/*.json
