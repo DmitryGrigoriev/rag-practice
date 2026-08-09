@@ -1,7 +1,11 @@
+import random
+
 from src.data_loader import load_json, merge_questions_and_answers
 from src.indexing import create_documents, build_embeddings
 from src.generation import answer_without_rag, answer_with_rag
 from src.retrieval import retrieve_documents, build_context
+from src.evaluation import extract_answers, compute_bleu, compute_rouge
+from src.judge import judge_answer
 
 def main():
     # 1. Загрузка данных
@@ -53,9 +57,31 @@ def main():
             break
     # 4. Оценка результатов
     
+    llm_predictions, references = extract_answers(llm_answer, "llm_answer")
+    rag_predictions, _ = extract_answers(llm_answer, "rag_answer")
+    
+    metrics = {
+        "llm": {
+            "bleu": compute_bleu(llm_predictions, references),
+            "rouge-L": compute_rouge(llm_predictions, references)
+        },
+        "rag": {
+            "bleu": compute_bleu(rag_predictions, references),
+            "rouge-L": compute_rouge(rag_predictions, references)
+        }
+    }
+    
+    for item in llm_answer:
+        judgement = judge_answer(
+            question=item['question'],
+            context=item['context'],
+            reference_answer=item['ground_truth_answer'],
+            candidate_answer=item['rag_answer']
+        )
+        item['judge_label'] = judgement.label
     # 5. Сохранение результатов
     
-    return llm_answer
+    return metrics
 
 if __name__ == "__main__":
-    print(main()[35])
+    print(main()[random.choice(range(50))])
