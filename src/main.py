@@ -1,4 +1,7 @@
+import json
 import random
+from pathlib import Path
+from tqdm import tqdm
 
 from src.data_loader import load_json, merge_questions_and_answers
 from src.indexing import create_documents, build_embeddings
@@ -6,6 +9,7 @@ from src.generation import answer_without_rag, answer_with_rag
 from src.retrieval import retrieve_documents, build_context
 from src.evaluation import extract_answers, compute_bleu, compute_rouge
 from src.judge import judge_answer
+from src.save_json import save_json
 
 def main():
     # 1. Загрузка данных
@@ -21,8 +25,11 @@ def main():
     embeddings = build_embeddings(documents)
     
     # 3. Генерация plain и RAG-ответов
-    llm_answer = []
-    for (i, item) in enumerate(question_answer, start=1):
+    llm_answers = []
+    for (i, item) in enumerate(
+            tqdm(question_answer, desc='Получение ответа'),
+            start=1
+        ):
         
         try:
             
@@ -37,7 +44,7 @@ def main():
             plain_answer = answer_without_rag(item['question'])
             rag_answer = answer_with_rag(item['question'], context)
             
-            llm_answer.append({
+            llm_answers.append({
                 "question": item['question'],
                 "ground_truth_answer": item['answer'],
                 "llm_answer": plain_answer,
@@ -57,8 +64,8 @@ def main():
             break
     # 4. Оценка результатов
     
-    llm_predictions, references = extract_answers(llm_answer, "llm_answer")
-    rag_predictions, _ = extract_answers(llm_answer, "rag_answer")
+    llm_predictions, references = extract_answers(llm_answers, "llm_answer")
+    rag_predictions, _ = extract_answers(llm_answers, "rag_answer")
     
     metrics = {
         "llm": {
@@ -71,7 +78,7 @@ def main():
         }
     }
     
-    for item in llm_answer:
+    for item in tqdm(llm_answers, desc="Оценка ответов"):
         judgement = judge_answer(
             question=item['question'],
             context=item['context'],
@@ -79,9 +86,10 @@ def main():
             candidate_answer=item['rag_answer']
         )
         item['judge_label'] = judgement.label
+
     # 5. Сохранение результатов
-    
-    return metrics
+    save_json('data/llm_answers.json', llm_answers)
+    save_json('data/metrics.json', metrics)
 
 if __name__ == "__main__":
-    print(main()[random.choice(range(50))])
+    main()
