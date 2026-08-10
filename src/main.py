@@ -1,6 +1,3 @@
-import json
-import random
-from pathlib import Path
 from tqdm import tqdm
 
 from src.data_loader import load_json, merge_questions_and_answers
@@ -25,9 +22,9 @@ def main():
     embeddings = build_embeddings(documents)
     
     # 3. Генерация plain и RAG-ответов
-    llm_answers = []
-    for (i, item) in enumerate(
-            tqdm(question_answer, desc='Получение ответа'),
+    results = []
+    for i, item in enumerate(
+            tqdm(question_answer, desc='Получение ответов'),
             start=1
         ):
         
@@ -44,28 +41,28 @@ def main():
             plain_answer = answer_without_rag(item['question'])
             rag_answer = answer_with_rag(item['question'], context)
             
-            llm_answers.append({
-                "question": item['question'],
-                "ground_truth_answer": item['answer'],
+            results.append({
+                "question": item["question"],
+                "ground_truth_answer": item["answer"],
                 "llm_answer": plain_answer,
                 "rag_answer": rag_answer,
                 "retrieved": [
-                    {"document_id": result["document"].metadata["id"],
-                    "score": result['score']
+                    {
+                        "document_id": result["document"].metadata["id"],
+                        "score": result["score"]
                     }
                     for result in retrieved
-                    ],
+                ],
                 "context": context
-                }
-            )
+            })
 
         except Exception as error:
             print(f"Ошибка на объекте {i}: {error}")
-            break
+            raise
     # 4. Оценка результатов
     
-    llm_predictions, references = extract_answers(llm_answers, "llm_answer")
-    rag_predictions, _ = extract_answers(llm_answers, "rag_answer")
+    llm_predictions, references = extract_answers(results, "llm_answer")
+    rag_predictions, _ = extract_answers(results, "rag_answer")
     
     metrics = {
         "llm": {
@@ -78,17 +75,24 @@ def main():
         }
     }
     
-    for item in tqdm(llm_answers, desc="Оценка ответов"):
-        judgement = judge_answer(
-            question=item['question'],
-            context=item['context'],
-            reference_answer=item['ground_truth_answer'],
-            candidate_answer=item['rag_answer']
-        )
-        item['judge_label'] = judgement.label
+    for i, item in enumerate(
+        tqdm(results, desc="Оценка ответов"),
+        start=1
+    ):
+        try:
+            judgement = judge_answer(
+                question=item['question'],
+                context=item['context'],
+                reference_answer=item['ground_truth_answer'],
+                candidate_answer=item['rag_answer']
+            )
+            item['judge_label'] = judgement.label
+        except Exception as error:
+            print(f"Ошибка на объекте {item.id}: {error}")
+            raise
 
     # 5. Сохранение результатов
-    save_json('data/llm_answers.json', llm_answers)
+    save_json('data/llm_answers.json', results)
     save_json('data/metrics.json', metrics)
 
 if __name__ == "__main__":
