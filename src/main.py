@@ -4,7 +4,7 @@ from src.data_loader import load_json, merge_questions_and_answers
 from src.indexing import create_documents, build_embeddings
 from src.generation import answer_without_rag, answer_with_rag
 from src.retrieval import retrieve_documents, build_context
-from src.evaluation import extract_answers, compute_bleu, compute_rouge
+from src.evaluation import extract_answers, compute_bleu, compute_rouge, compute_recall_at_k
 from src.judge import judge_answer
 from src.save_json import save_json
 
@@ -53,6 +53,7 @@ def main():
                     }
                     for result in retrieved
                 ],
+                "relevant_document_id": item["relevant_document_id"],
                 "context": context
             })
 
@@ -64,16 +65,6 @@ def main():
     llm_predictions, references = extract_answers(results, "llm_answer")
     rag_predictions, _ = extract_answers(results, "rag_answer")
     
-    metrics = {
-        "llm": {
-            "bleu": compute_bleu(llm_predictions, references),
-            "rouge-L": compute_rouge(llm_predictions, references)
-        },
-        "rag": {
-            "bleu": compute_bleu(rag_predictions, references),
-            "rouge-L": compute_rouge(rag_predictions, references)
-        }
-    }
     
     for i, item in enumerate(
         tqdm(results, desc="Оценка ответов"),
@@ -90,6 +81,26 @@ def main():
         except Exception as error:
             print(f"Ошибка на объекте {item.id}: {error}")
             raise
+    
+    llm_predictions, references = extract_answers(results, "llm_answer")
+    rag_predictions, _ = extract_answers(results, "rag_answer")
+    
+    metrics = {
+        "llm": {
+            "bleu": compute_bleu(llm_predictions, references),
+            "rouge-L": compute_rouge(llm_predictions, references),
+            "recall@1": "-",
+            "recall@3": "-"
+        },
+        "rag": {
+            "bleu": compute_bleu(rag_predictions, references),
+            "rouge-L": compute_rouge(rag_predictions, references),
+        },
+        "retriever": {
+            "recall@1": compute_recall_at_k(results, k=1),
+            "recall@3": compute_recall_at_k(results)
+        }
+    }
 
     # 5. Сохранение результатов
     save_json('data/llm_answers.json', results)

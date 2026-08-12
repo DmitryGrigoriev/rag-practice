@@ -49,4 +49,24 @@ def compute_rouge(predictions: list[str], references: list[str]) -> float:
         predictions=predictions,
         references=references
     )['rougeL']
+
+def compute_recall_at_k(results: list[dict], k: int = 3) -> float:
+    """
+    Вычисляет Recall@k для retrieval.
+    Args:
+        results: результаты retrieval с relevant_document_id
+                и списком retrieved документов.
+        k: количество первых retrieved документов для проверки.
+    Returns:
+        Доля вопросов, для которых релевантный документ попал в top-k.
+    """
+    recall_k = 0
     
+    for result in results:
+        relevant_doc = result['relevant_document_id'] 
+        for retrieved_doc  in result['retrieved'][:k]:
+            if retrieved_doc['document_id'] == relevant_doc:
+                recall_k += 1
+                break
+    
+    return recall_k / len(results)
