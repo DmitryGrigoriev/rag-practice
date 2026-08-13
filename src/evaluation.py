@@ -70,3 +70,32 @@ def compute_recall_at_k(results: list[dict], k: int = 3) -> float:
                 break
     
     return recall_k / len(results)
+
+def compute_label_distribution(results: list[dict]) -> dict[str, float]:
+    """
+    Вычисляем распределение меток LLM as judge
+    Args:
+        results: результаты RAG с метками LLM as judge.
+    Return:
+        Возвращает словарь с распределением меток
+    """
+    
+    total = len(results)
+    correct, partial, incorrect = 0, 0, 0
+    
+    for result in results:
+        if result['judge_label'] == "correct":
+            correct += 1
+        elif result['judge_label'] == 'partial':
+            partial += 1
+        elif result["judge_label"] == "incorrect":
+            incorrect += 1
+        else:
+            raise ValueError("Неизвестная метка")
+            
+    return {
+        "correct": correct / total,
+        "partial": partial / total,
+        "incorrect": incorrect / total
+    }
+    

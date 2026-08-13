@@ -4,7 +4,7 @@ from src.data_loader import load_json, merge_questions_and_answers
 from src.indexing import create_documents, build_embeddings
 from src.generation import answer_without_rag, answer_with_rag
 from src.retrieval import retrieve_documents, build_context
-from src.evaluation import extract_answers, compute_bleu, compute_rouge, compute_recall_at_k
+from src.evaluation import extract_answers, compute_bleu, compute_rouge, compute_recall_at_k, compute_label_distribution
 from src.judge import judge_answer
 from src.save_json import save_json
 
@@ -88,9 +88,7 @@ def main():
     metrics = {
         "llm": {
             "bleu": compute_bleu(llm_predictions, references),
-            "rouge-L": compute_rouge(llm_predictions, references),
-            "recall@1": "-",
-            "recall@3": "-"
+            "rouge-L": compute_rouge(llm_predictions, references)
         },
         "rag": {
             "bleu": compute_bleu(rag_predictions, references),
@@ -99,7 +97,8 @@ def main():
         "retriever": {
             "recall@1": compute_recall_at_k(results, k=1),
             "recall@3": compute_recall_at_k(results)
-        }
+        },
+        "llm_as_judge": compute_label_distribution(results)
     }
 
     # 5. Сохранение результатов
