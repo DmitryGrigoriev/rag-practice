@@ -99,3 +99,23 @@ def compute_label_distribution(results: list[dict]) -> dict[str, float]:
         "incorrect": incorrect / total
     }
     
+def compute_human_vs_judge_agreement(results: list[dict]) -> dict[str, float]:
+    """
+    Вычисляем соответствие меток LLM as judge и вручную размеченными метками
+    Args:
+        results: результаты RAG с метками LLM as judge и human label
+    Return:
+        Возвращает долю совпадений меток human label и LLM as judge
+    """
+    
+    total = len(results)
+    matches = 0
+    
+    for result in results:
+        if result['judge_label'] == result['human_label']:
+            matches += 1
+            
+    return {
+        "agreement": matches / total
+    }
+    
